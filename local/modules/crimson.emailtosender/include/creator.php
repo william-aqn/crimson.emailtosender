@@ -162,7 +162,7 @@ class Creator {
             'TEMPLATE_TYPE' => $params['TEMPLATE_TYPE'],
             'TEMPLATE_ID' => $params['TEMPLATE_ID'],
         );
-        pr($cfg);
+
         foreach ($configuration->getOptions() as $option) {
             $key = $option->getCode();
 
