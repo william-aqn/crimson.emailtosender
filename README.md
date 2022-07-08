@@ -1,5 +1,5 @@
 # crimson.emailtosender
-Отправка через email маркетинг обычных почтовых шаблонов
+Отправка через email маркетинг обычных почтовых шаблонов в 1С-Битрикс
 
 1. Создаём собственный обработчик по примеру [executors/base.php](/local/modules/crimson.emailtosender/executors/base.php) и добавляем в init 
 ```
