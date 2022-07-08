@@ -43,5 +43,6 @@ class CrimsonEmailToSenderHelper {
 }
 
 \Bitrix\Main\Loader::registerAutoLoadClasses(null, array(
-    '\Crimson\Mail\Executors\Base' => '/local/modules/crimson.emailtosender/executors/base.php', // Пример
+    '\Crimson\Mail\Executors\Base' => '/local/modules/crimson.emailtosender/include/executors/base.php', // Пример
+    '\Crimson\Mail\Executors\Base' => '/local/modules/crimson.emailtosender/include/creator.php', // Создаватель выпусков
 ));
