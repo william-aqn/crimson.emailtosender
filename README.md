@@ -34,6 +34,7 @@
 
 ## API
 ```
+\Bitrix\Main\Loader::includeModule('crimson.emailtosender');
 $ex = new \Crimson\Mail\Sender\Creator();
 /**
  * Создать рассылку на основе email шаблона и шаблона email события
