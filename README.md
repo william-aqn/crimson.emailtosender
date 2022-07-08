@@ -1,7 +1,7 @@
 # crimson.emailtosender
 Отправка через email маркетинг обычных почтовых шаблонов
 
-1. Создаём собственный обработчик по примеру executors\base.php и добавляем в init 
+1. Создаём собственный обработчик по примеру [a relative link](/local/modules/crimson.emailtosender/executors/base.php) и добавляем в init 
 ```
 // Сборщик исполнителей для компонента crimson:execute.mail
 \Bitrix\Main\EventManager::getInstance()->addEventHandler("crimson", "OnExecutorList",
