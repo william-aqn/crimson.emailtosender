@@ -42,31 +42,30 @@ class Creator {
 
     /**
      * Создать рассылку на основе email шаблона и шаблона email события
-     * @param string $title Заголовок письма
      * @param string $executorClass \Crimson\Mail\Executors\Base::build
-     * @param string $templateEventType Код email события
-     * @param string $templateCode Код email шаблона
+     * @param string $eventName Код email события
+     * @param string $siteTemplateId Код email шаблона
      * @param string $from Отправитель (email)
      * @param array $segment Сегмент
      * @param boolean $run Запустить рассылку
      * @return int ID рассылки
      */
-    public function addFromMailTemplateAndIncludeEvent($title, $executorClass, $templateEventType, $templateCode, $from, $segment, $run = false) {
+    public function addFromMailTemplateAndIncludeEvent($executorClass, $eventName, $siteTemplateId, $from, $segment, $run = false) {
         // 
         $executorClass = addslashes($executorClass);
         // TODO: проверка на существующие Ececutors
         $htmlBodyContent = '<div data-bx-block-editor-block-type="component">
-<?EventMessageThemeCompiler::includeComponent(
+<div class="bxBlockPadding"><?EventMessageThemeCompiler::includeComponent(
 	"crimson:execute.mail",
 	"",
 	Array(
 		"TEMPLATE_EXECUTE_CLASS" => "' . $executorClass . '",
-		"TEMPLATE_TYPE" => "' . $templateEventType . '",
+		"EVENT_NAME" => "' . $eventName . '",
 		"USER_ID" => "{#USER_ID#}"
 	)
-);?>
+);?></div>
 </div>';
-        return $this->addFromMailTemplate($title, $htmlBodyContent, $templateCode, $from, $segment, $run);
+        return $this->addFromMailTemplate($eventName, $htmlBodyContent, $siteTemplateId, $from, $segment, $run);
     }
 
     /**
@@ -110,7 +109,7 @@ class Creator {
             $params['TEMPLATE_TYPE'] = 'BASE'; // BASE для HTML // SITE_TMPL
         }
         if (!$params['TEMPLATE_ID']) {
-            $params['TEMPLATE_ID'] = 'empty'; // empty для HTML // proxy-seller-email-send
+            $params['TEMPLATE_ID'] = 'empty'; // empty для HTML // code-template-email-send
         }
         if (!$params['TITLE']) {
             $params['TITLE'] = 'Рассылка от ' . date("d.m.Y H:i:s");
@@ -125,7 +124,7 @@ class Creator {
             $segments = \Bitrix\Sender\Entity\Segment::getDefaultIds();
             $params['SEGMENT'] = $segments ? $segments : array(1);
         }
-
+//pr($params);
         $data = [
             'TITLE' => $params['TITLE'],
             'SEGMENTS_INCLUDE' => $segments,
@@ -148,6 +147,15 @@ class Creator {
         $subject = $params['TITLE'];
         $linkParams = \CUtil::translit($subject, 'ru');
 
+        // Подгружаем заголовок из шаблона события
+        if ($params['TEMPLATE_TYPE'] == "SITE_TMPL" && $params['TEMPLATE_ID'] && $params['TITLE']) {
+            $subject = [];
+            foreach ($this->getEventMessageSettings($params['TITLE']) as $messageSiteId => $messageText) {
+                $subject[] = "$messageSiteId:$messageText";
+            }
+            $subject = implode("| ", $subject);
+        }
+
         $message = $this->letter->getMessage();
         $configuration = $message->getConfiguration();
 
@@ -155,10 +163,12 @@ class Creator {
             'SUBJECT' => $subject,
             'MESSAGE' => $params['MESSAGE'],
             'EMAIL_FROM' => $params['FROM'],
-            'PRIORITY' => '',
-            'TRACK_MAIL' => 'Y',
-            'LINK_PARAMS' => 'utm_source=newsletter&utm_medium=mail&utm_campaign=' . $linkParams,
+            'PRIORITY' => '', // Важность: 1 (Highest) / 3 (Normal) / 5 (Lowest)
+            'TRACK_MAIL' => 'Y', // Отслеживание открытия письма
+            'APPROVE_CONFIRMATION' => 'N', // Подтверждение согласия на рассылку
+            'LINK_PARAMS' => 'utm_source=creator&utm_medium=mail&utm_campaign=' . $linkParams,
             'ATTACHMENT' => '',
+            'SENDING_TIME' => 'N', // Не ограничивать отправку по времени
             'TEMPLATE_TYPE' => $params['TEMPLATE_TYPE'],
             'TEMPLATE_ID' => $params['TEMPLATE_ID'],
         );
@@ -199,7 +209,7 @@ class Creator {
           $letter->getMessage()->getConfiguration()->set('TEMPLATE_TYPE', $params['TEMPLATE_TYPE']);
           $letter->getMessage()->getConfiguration()->set('TEMPLATE_ID', $params['TEMPLATE_ID']);
          */
-
+        // $message->getConfiguration()->set('REPLACER_FIELD', "THIS_REPLACER");
         // Save letter
         $result = $configuration->checkOptions();
         if ($result->isSuccess()) {
@@ -227,6 +237,56 @@ class Creator {
         if ($this->letter->hasErrors()) {
             throw new \Exception(implode(",", $this->letter->getErrorMessages()));
         }
+    }
+
+    private function getEventMessageSettings($eventName) {
+        if (!$eventName) {
+            return [];
+        }
+
+        $ret = [];
+
+        // Запрос LANGUAGE_ID->Subject
+        $rs = \Bitrix\Main\Mail\Internal\EventMessageTable::getList([
+                    'select' => ['LANGUAGE_ID', 'SUBJECT'],
+                    'filter' => ['=EVENT_NAME' => $eventName],
+        ]);
+        while ($arMess = $rs->fetch()) {
+            $ret[$arMess['LANGUAGE_ID']] = $arMess['SUBJECT'];
+        }
+        if (count($ret) == 0) {
+            throw new \Exception("Тип события [$eventName] не найден");
+        }
+        return $ret;
+    }
+    private function getEventMessageSettingsLid($eventName) {
+        if (!$eventName) {
+            return [];
+        }
+
+        $ret = [];
+
+        // Запрос LID->Subject
+        $rs = \Bitrix\Main\Mail\Internal\EventMessageSiteTable::getList([
+                    'select' => ['SITE_ID', 'SUBJECT' => 'MESSAGE.SUBJECT'],
+                    'filter' => ['=MESSAGE.EVENT_NAME' => $eventName],
+                    'runtime' => [
+                        'MESSAGE' => [
+                            'data_type' => '\Bitrix\Main\Mail\Internal\EventMessageTable',
+                            'reference' => [
+                                '=this.EVENT_MESSAGE_ID' => 'ref.ID',
+                            ],
+                            'join_type' => 'left'
+                        ],
+                    ]
+        ]);
+        while ($arMess = $rs->fetch()) {
+            $ret[$arMess['SITE_ID']] = $arMess['SUBJECT'];
+        }
+        if (count($ret) == 0) {
+            throw new \Exception("Тип события [$eventName] не найден");
+        }
+        return $ret;
     }
 
 }

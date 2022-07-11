@@ -13,7 +13,7 @@ class CrimsonExecuteMail extends CBitrixComponent {
     public function onPrepareComponentParams($arParams) {
         $result = [
             "USER_ID" => (int) $arParams["USER_ID"],
-            "TEMPLATE_TYPE" => $arParams["TEMPLATE_TYPE"],
+            "EVENT_NAME" => $arParams["EVENT_NAME"],
             "TEMPLATE_EXECUTE_CLASS" => $arParams["TEMPLATE_EXECUTE_CLASS"],
         ];
         return $result;
@@ -24,24 +24,10 @@ class CrimsonExecuteMail extends CBitrixComponent {
      * @return boolean
      */
     private function initUserLid() {
-        $res = \Bitrix\Main\UserTable::getList(Array(
-                    "select" => ["LID"],
-                    "filter" => ['=ID' => $this->arParams["USER_ID"]],
-        ));
-        if ($arRes = $res->fetch()) {
-            $this->lid = $arRes['LID'];
-            return $this->lid;
-        } else {
-            $res = \Bitrix\Main\SiteTable::getList([
-                        "select" => ["LID"],
-                        "filter" => ['=DEF' => 'Y']
-            ]);
-            if ($arRes = $res->fetch()) {
-                $this->lid = $arRes['LID'];
-                return $this->lid;
-            }
-        }
-        return false;
+        \Bitrix\Main\Loader::includeModule('crimson.emailtosender');
+        $ret = \CrimsonEmailToSenderHelper::getUserLidAndLanguageId($this->arParams["USER_ID"]);
+        $this->lid = $ret['LID'];
+        return $this->lid;
     }
 
     /**
@@ -52,7 +38,7 @@ class CrimsonExecuteMail extends CBitrixComponent {
         if (!$this->initUserLid()) {
             return false;
         }
-        $rsMess = \CEventMessage::GetList($by = "site_id", $order = "desc", ['=TYPE_ID' => $this->arParams["TEMPLATE_TYPE"], '=LID' => $this->lid]);
+        $rsMess = \CEventMessage::GetList($by = "site_id", $order = "desc", ['TYPE_ID' => [$this->arParams["EVENT_NAME"]], 'LID' => $this->lid]);
         if ($arMess = $rsMess->GetNext()) {
             $this->template = html_entity_decode($arMess['MESSAGE']);
             return $this->template;
@@ -73,7 +59,7 @@ class CrimsonExecuteMail extends CBitrixComponent {
         }
         return false;
     }
-    
+
     /**
      * Заполняем шаблон
      * @return boolean
@@ -94,7 +80,7 @@ class CrimsonExecuteMail extends CBitrixComponent {
      * @return boolean
      */
     public function executeComponent() {
-        if ($this->arParams["USER_ID"] <= 0 || !$this->arParams["TEMPLATE_TYPE"] || !$this->arParams["TEMPLATE_EXECUTE_CLASS"]) {
+        if ($this->arParams["USER_ID"] <= 0 || !$this->arParams["EVENT_NAME"] || !$this->arParams["TEMPLATE_EXECUTE_CLASS"]) {
             return false;
         }
         if ($result = $this->build()) {
@@ -103,7 +89,6 @@ class CrimsonExecuteMail extends CBitrixComponent {
             return true;
         }
         return false;
-
     }
 
 }

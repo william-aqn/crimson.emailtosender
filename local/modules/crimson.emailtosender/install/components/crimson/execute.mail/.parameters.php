@@ -31,8 +31,8 @@ $arComponentParameters = [
             #"COLS" => 25,
             "PARENT" => "BASE",
         ],
-        "TEMPLATE_TYPE" => [
-            "NAME" => "Почтовый шаблон",
+        "EVENT_NAME" => [
+            "NAME" => "Тип события",
             "TYPE" => "LIST",
             "MULTIPLE" => "N",
             "VALUES" => $emailTypes,
@@ -40,7 +40,7 @@ $arComponentParameters = [
             "PARENT" => "BASE",
         ],
         "TEMPLATE_EXECUTE_CLASS" => [
-            "NAME" => "Функция для заполнения переменными шаблона",
+            "NAME" => "Функция для заполнения переменными шаблона события",
             "TYPE" => "LIST",
             "MULTIPLE" => "N",
             "VALUES" => $executors,

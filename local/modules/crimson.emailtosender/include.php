@@ -40,9 +40,66 @@ class CrimsonEmailToSenderHelper {
         return array_combine($exe, $exe);
     }
 
+    /**
+     * Получить LID и LANGUAGE_ID по $userId и/или $email
+     * @param integer $userId
+     * @param string $email
+     * @return array
+     */
+    static function getUserLidAndLanguageId($userId, $email = "") {
+        if (!$userId && !$email) {
+            return static::getDefaultLidAndLang();
+        }
+        $filter = ['!LID' => false];
+
+        if ($userId) {
+            $filter['=ID'] = $userId;
+        }
+        if ($email) {
+            $filter['=EMAIL'] = $email;
+        }
+        $res = \Bitrix\Main\UserTable::getList(Array(
+                    "select" => ["ID", "LID", 'LANGUAGE_ID', 'SITE_LID' => 'site_ref.LID', 'SITE_LANGUAGE_ID' => 'site_ref.LANGUAGE_ID'],
+                    "filter" => $filter,
+                    'runtime' => [
+                        'site_ref' => [
+                            'data_type' => '\Bitrix\Main\SiteTable',
+                            'reference' => [
+                                '=this.LID' => 'ref.LID',
+                            ],
+                            'join_type' => 'left'
+                        ]
+                    ]
+        ));
+        if ($arRes = $res->fetch()) {
+            if (!$arRes['LANGUAGE_ID']) {
+                $arRes['LANGUAGE_ID'] = $arRes['SITE_LANGUAGE_ID'];
+            }
+            return $arRes;
+        } else {
+            return static::getDefaultLidAndLang();
+        }
+        return false;
+    }
+
+    static function getDefaultLidAndLang() {
+        $res = \Bitrix\Main\SiteTable::getList([
+                    "select" => ["LID", 'LANGUAGE_ID'],
+                    "filter" => ['=DEF' => 'Y']
+        ]);
+        if ($arRes = $res->fetch()) {
+            return $arRes;
+        } else {
+            return false;
+        }
+    }
+
 }
 
 \Bitrix\Main\Loader::registerAutoLoadClasses(null, array(
     '\Crimson\Mail\Executors\Base' => '/local/modules/crimson.emailtosender/include/executors/base.php', // Пример
-    '\Crimson\Mail\Executors\Base' => '/local/modules/crimson.emailtosender/include/creator.php', // Создаватель выпусков
+    '\Crimson\Mail\Sender\Creator' => '/local/modules/crimson.emailtosender/include/creator.php', // Создаватель выпусков
+    '\Crimson\Mail\Sender\Editor' => '/local/modules/crimson.emailtosender/include/editor.php', // Визуальный редактор
+    '\Crimson\Mail\Sender\Posting' => '/local/modules/crimson.emailtosender/include/posting.php', // Перехватываем отправку выпуска
+    '\Crimson\Mail\Sender\Submenu' => '/local/modules/crimson.emailtosender/include/submenu.php', // Ручная генерация выпуска
 ));
