@@ -32,22 +32,26 @@
 4. Добавляем через визуальный редактор рассылок - компонент execute.mail
 ![sreenshot](help.png)
 
+5. Локализация заголовка рассылки происходит по шаблону
+```
+ru:Русский заголовок|en:English title
+```
+В зависимости от настроек у пользователя, будет оставлена фраза *Русский заголовок* или *English title*
 ## API
 ```
 \Bitrix\Main\Loader::includeModule('crimson.emailtosender');
 $ex = new \Crimson\Mail\Sender\Creator();
 /**
  * Создать рассылку на основе email шаблона и шаблона email события
- * @param string $title Заголовок письма
  * @param string $executorClass \Crimson\Mail\Executors\Base::build
- * @param string $templateEventType Код email события
- * @param string $templateCode Код email шаблона
+ * @param string $eventName Код email события
+ * @param string $siteTemplateId Код email шаблона
  * @param string $from Отправитель (email)
  * @param array $segment Сегмент
  * @param boolean $run Запустить рассылку
  * @return int ID рассылки
  */
-$ex->addFromMailTemplateAndIncludeEvent('Заголовок','\Crimson\Mail\Executors\Base::build','USER_INFO','email-template','mailer@domain.com', false, false));
+$ex->addFromMailTemplateAndIncludeEvent('\Crimson\Mail\Executors\Base::build','USER_INFO','email-template','mailer@domain.com', false, false));
 
 
 
@@ -76,6 +80,10 @@ $ex->addFromMailTemplate('Заголовок','<div>content</div>','email-templa
  */
 $ex->addHtml('Заголовок','content','mailer@domain.com', false, false);
 ```
+
+Для отладки доступна опция быстрого создания рассылки из шаблона
+![sreenshot](debug.png)
+
 # Установка
 Скопировать модуль в /local/modules и установить через админку.
 
