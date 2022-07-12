@@ -56,12 +56,14 @@ class crimson_emailtosender extends CModule {
         \Bitrix\Main\EventManager::getInstance()->registerEventHandler('main', 'OnBeforeBlockEditorMailPreview', $this->MODULE_ID, '\Crimson\Mail\Sender\Editor', 'OnBeforeBlockEditorMailPreview');
         // Локализуем отправку рассылки для конкретного пользователя
         \Bitrix\Main\EventManager::getInstance()->registerEventHandler('sender', 'OnBeforePostingSendRecipient', $this->MODULE_ID, '\Crimson\Mail\Sender\Posting', 'OnBeforePostingSendRecipient');
+        // Преобразуем константы в письмах
+        //\Bitrix\Main\EventManager::getInstance()->registerEventHandler('sender', 'OnPostingSendRecipientEmail', $this->MODULE_ID, '\Crimson\Mail\Sender\Posting', 'OnPostingSendRecipientEmail');
         
         // Отладочный пункт меню
         \Bitrix\Main\EventManager::getInstance()->registerEventHandler('main', 'OnAdminListDisplay', $this->MODULE_ID, '\Crimson\Mail\Sender\Submenu', 'OnAdminListDisplayHandler');
         \Bitrix\Main\EventManager::getInstance()->registerEventHandler('main', 'OnBeforeProlog', $this->MODULE_ID, '\Crimson\Mail\Sender\Submenu', 'OnBeforeProlog');
         // Подменяем язык из темы письма
-        \Bitrix\Main\EventManager::getInstance()->registerEventHandler('main', 'OnBeforeMailSend', '\Crimson\Mail\Sender\Posting', 'OnBeforeMailSend');
+        \Bitrix\Main\EventManager::getInstance()->registerEventHandler('main', 'OnBeforeMailSend', $this->MODULE_ID, '\Crimson\Mail\Sender\Posting', 'OnBeforeMailSend');
 
         RegisterModule($this->MODULE_ID);
         $this->ShowForm('OK', GetMessage('MOD_INST_OK'));
@@ -72,11 +74,12 @@ class crimson_emailtosender extends CModule {
         \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('crimson', 'OnExecutorList', $this->MODULE_ID, '\Crimson\Mail\Executors\Base', 'loadExecutors');
         \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('main', 'OnBeforeBlockEditorMailPreview', $this->MODULE_ID, '\Crimson\Mail\Sender\Editor', 'OnBeforeBlockEditorMailPreview');
         \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('sender', 'OnBeforePostingSendRecipient', $this->MODULE_ID, '\Crimson\Mail\Sender\Posting', 'OnBeforePostingSendRecipient');
-        
+        \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('sender', 'OnPostingSendRecipientEmail', $this->MODULE_ID, '\Crimson\Mail\Sender\Posting', 'OnPostingSendRecipientEmail');
+
         \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('main', 'OnAdminListDisplay', $this->MODULE_ID, '\Crimson\Mail\Sender\Submenu', 'OnAdminListDisplayHandler');
         \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('main', 'OnBeforeProlog', $this->MODULE_ID, '\Crimson\Mail\Sender\Submenu', 'OnBeforeProlog');
-        \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('main', 'OnBeforeMailSend', '\Crimson\Mail\Sender\Posting', 'OnBeforeMailSend');
-        
+        \Bitrix\Main\EventManager::getInstance()->unRegisterEventHandler('main', 'OnBeforeMailSend', $this->MODULE_ID, '\Crimson\Mail\Sender\Posting', 'OnBeforeMailSend');
+
         UnRegisterModuleDependences('crimson', 'OnExecutorList', $this->MODULE_ID, '\Crimson\Mail\Executors\Base', 'loadExecutors');
         UnRegisterModule($this->MODULE_ID);
         $this->ShowForm('OK', GetMessage('MOD_UNINST_OK'));

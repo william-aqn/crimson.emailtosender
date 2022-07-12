@@ -19,6 +19,15 @@ class Creator {
     }
 
     /**
+     * Список рассылок
+     * @param type $params
+     * @return type
+     */
+    public function getList($params) {
+        return \Bitrix\Sender\Entity\Letter::getList($params);
+    }
+
+    /**
      * Создать рассылку с произвольным HTML кодом
      * @param string $title Заголовок письма
      * @param string $html Целиком HTML (c html/body)
@@ -53,7 +62,7 @@ class Creator {
     public function addFromMailTemplateAndIncludeEvent($executorClass, $eventName, $siteTemplateId, $from, $segment, $run = false) {
         // 
         $executorClass = addslashes($executorClass);
-        // TODO: проверка на существующие Ececutors
+        // TODO: проверка на существующие Executors
         $htmlBodyContent = '<div data-bx-block-editor-block-type="component">
 <div class="bxBlockPadding"><?EventMessageThemeCompiler::includeComponent(
 	"crimson:execute.mail",
@@ -124,10 +133,10 @@ class Creator {
             $segments = \Bitrix\Sender\Entity\Segment::getDefaultIds();
             $params['SEGMENT'] = $segments ? $segments : array(1);
         }
-//pr($params);
+        //pr($params);
         $data = [
             'TITLE' => $params['TITLE'],
-            'SEGMENTS_INCLUDE' => $segments,
+            'SEGMENTS_INCLUDE' => $params['SEGMENT'],
             //'SEGMENTS_EXCLUDE' => $this->preparePostSegments(false),
             'TEMPLATE_TYPE' => $params['TEMPLATE_TYPE'],
             'TEMPLATE_ID' => $params['TEMPLATE_ID'],
@@ -226,7 +235,7 @@ class Creator {
             if ($this->letter->save()) {
                 //Send mail
                 if ($params['RUN'] === true || $params['RUN'] === 'Y') {
-                    //$this->letter->getState()->send();
+                    $this->letter->getState()->send();
                 }
                 return $this->letter->getId();
             }
@@ -259,6 +268,7 @@ class Creator {
         }
         return $ret;
     }
+
     private function getEventMessageSettingsLid($eventName) {
         if (!$eventName) {
             return [];

@@ -8,7 +8,7 @@ class CrimsonExecuteMail extends CBitrixComponent {
 
     private $lid;
     private $template;
-    private $variables;
+    private $variables = [];
 
     public function onPrepareComponentParams($arParams) {
         $result = [
@@ -27,6 +27,11 @@ class CrimsonExecuteMail extends CBitrixComponent {
         \Bitrix\Main\Loader::includeModule('crimson.emailtosender');
         $ret = \CrimsonEmailToSenderHelper::getUserLidAndLanguageId($this->arParams["USER_ID"]);
         $this->lid = $ret['LID'];
+
+        // Различные стандартные константы связанные с сайтом
+        $this->variables['SITE_NAME'] = $ret['SITE_NAME'];
+        $this->variables['SERVER_NAME'] = $ret['SITE_SERVER_NAME'];
+        $this->variables['DEFAULT_EMAIL_FROM'] = $ret['SITE_EMAIL'];
         return $this->lid;
     }
 
@@ -54,7 +59,8 @@ class CrimsonExecuteMail extends CBitrixComponent {
         if (!$this->initTemplate()) {
             return false;
         }
-        if ($this->variables = call_user_func($this->arParams["TEMPLATE_EXECUTE_CLASS"], $this->arParams["USER_ID"])) {
+        if ($variables = call_user_func($this->arParams["TEMPLATE_EXECUTE_CLASS"], $this->arParams["USER_ID"])) {
+            $this->variables = array_merge($this->variables, $variables);
             return $this->variables;
         }
         return false;

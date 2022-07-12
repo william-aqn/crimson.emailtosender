@@ -29,9 +29,17 @@ class CrimsonEmailToSenderOptions {
                 "OPTIONS" => [
                    
                     [
-                        'SET_SITE_ID_AFTER_LOGIN', // Ключ
-                        'Обновлять поле LID (привязка к сайту) после авторизации', // Название поля
-                        'N', // По умолчанию
+                        'REPLACE_ALL_TITLE_FROM_EMAIL', // Ключ
+                        'Локализировать заголовки только из модуля рассылок (sender)', // Название поля
+                        'Y', // По умолчанию
+                        [
+                            'checkbox',
+                        ]
+                    ],
+                    [
+                        'SET_SITE_ID_AFTER_LOGIN',
+                        'Обновлять поле LID (привязка к сайту) после авторизации', 
+                        'N',
                         [
                             'checkbox',
                         ]

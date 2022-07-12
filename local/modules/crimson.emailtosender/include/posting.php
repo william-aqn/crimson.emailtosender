@@ -3,6 +3,25 @@
 namespace Crimson\Mail\Sender;
 
 class Posting {
+    /*
+      Есть в наличии:
+      OnBeforePostingSendRecipient - перед отправкой
+      OnPostingSendRecipient - после подготовки шаблона, но перед выполнением компонентов
+      OnPostingSendRecipientEmail - сформировано конечное письмо, перед отправкой
+      OnAfterPostingSendRecipient - после отправки и после смены статусов
+     */
+
+    /**
+     * Тут можно BODY поменять
+     * @param \Bitrix\Main\Event $event
+     * @return \Bitrix\Main\EventResult
+     */
+//    public static function OnPostingSendRecipientEmail(\Bitrix\Main\Event $event) {
+//        $parameters = $event->getParameters()[0];
+//        // a2l($event, 'OnPostingSendRecipientEmail', 'before_posting_event_ex');
+//        $mod = [];
+//        return new \Bitrix\Main\EventResult(\Bitrix\Main\EventResult::SUCCESS, $mod);
+//    }
 
     /**
      * Задействуем многоязычность у шаблона для конкретного пользователя
@@ -11,24 +30,28 @@ class Posting {
      */
     public static function OnBeforePostingSendRecipient(\Bitrix\Main\Event $event) {
         $parameters = $event->getParameters()[0];
-
-        if (!$parameters['FIELDS']['USER_ID']) {
+        $mod = [];
+        if (!$parameters['FIELDS']['SITE_ID'] && !$parameters['FIELDS']['LANGUAGE_ID']) {
+            $mod = [
+                'FIELDS' => $parameters['FIELDS'],
+                'TRACK_CLICK' => $parameters['TRACK_CLICK'],
+            ];
             $info = \CrimsonEmailToSenderHelper::getUserLidAndLanguageId(0, $parameters['FIELDS']['EMAIL_TO']);
-            $parameters['FIELDS']['USER_ID'] = $info['ID'];
-            $parameters['FIELDS']['SITE_ID'] = $info['LID']; // Задействуем многоязычность у шаблона
-            $parameters['FIELDS']['LANGUAGE_ID'] = $info['LANGUAGE_ID']; // Задействуем многоязычность у шаблона
+            $mod['FIELDS']['SITE_ID'] = $info['LID']; // Задействуем многоязычность у шаблона
+            $mod['FIELDS']['LANGUAGE_ID'] = $info['LANGUAGE_ID']; // Задействуем многоязычность у шаблона
+            // Дополняем недостающую информацию
+            if (!$parameters['FIELDS']['USER_ID']) {
+                $mod['FIELDS']['USER_ID'] = $info['ID'];
+            }
+
+            // Используем TRACK_CLICK для наших дел
+            // Пробрасываем в onBeforeMailSend
+            $mod['TRACK_CLICK']['FIELDS']['LANG'] = $mod['FIELDS']['LANGUAGE_ID'];
         }
 
-        if (!$parameters['FIELDS']['SITE_ID']) {
-            $info = \CrimsonEmailToSenderHelper::getUserLidAndLanguageId(0, $parameters['FIELDS']['EMAIL_TO']);
-            $parameters['FIELDS']['SITE_ID'] = $info['LID']; // Задействуем многоязычность у шаблона
-            $parameters['FIELDS']['LANGUAGE_ID'] = $info['LANGUAGE_ID']; // Задействуем многоязычность у шаблона
-        }
-
-        $parameters['TRACK_CLICK']['FIELDS']['LANG'] = $parameters['FIELDS']['LANGUAGE_ID'];
-
-        a2l($event, 'OnBeforePostingSendRecipient', 'before_posting_event');
-        return new \Bitrix\Main\EventResult(\Bitrix\Main\EventResult::SUCCESS, $parameters);
+        // a2l($event, 'OnBeforePostingSendRecipient', 'before_posting_event_ex');
+        // a2l($mod, 'MOD - OnBeforePostingSendRecipient', 'before_posting_event_ex');
+        return new \Bitrix\Main\EventResult(\Bitrix\Main\EventResult::SUCCESS, $mod);
     }
 
     /**
@@ -38,12 +61,23 @@ class Posting {
      */
     public static function onBeforeMailSend(\Bitrix\Main\Event $event) {
         $mailParams = $event->getParameter(0);
-        if ($mailParams['TRACK_READ']['FIELDS']['LANG'] && stripos($mailParams['SUBJECT'], $mailParams['TRACK_READ']['FIELDS']['LANG']) !== false) {
-            $mailParams['SUBJECT'] = static::lang($mailParams['SUBJECT'], $mailParams['TRACK_READ']['FIELDS']['LANG']);
-        }
-        a2l($event, 'onBeforeMailSend', 'email_send_ex');
+        $mod = [];
+        $lang = $mailParams['TRACK_CLICK']['FIELDS']['LANG'];
 
-        return new \Bitrix\Main\EventResult(\Bitrix\Main\EventResult::SUCCESS, $mailParams);
+        // Если тестовая отправка через редактор
+        // TODO: Опционально сделать для всех писем
+        if ($mailParams['TRACK_CLICK']['MODULE_ID'] === 'sender' && $mailParams['TRACK_CLICK']['FIELDS']['RECIPIENT_ID'] === 0) {
+            $info = \CrimsonEmailToSenderHelper::getUserLidAndLanguageId(0, $mailParams['TO']);
+            $lang = $info['LANGUAGE_ID'];
+        }
+
+        // Заменяем строку
+        if ($lang && stripos($mailParams['SUBJECT'], $lang) !== false) {
+            $mod['SUBJECT'] = static::lang($mailParams['SUBJECT'], $lang);
+        }
+
+        //a2l($mailParams, 'onBeforeMailSend', 'email_send_ex');
+        return new \Bitrix\Main\EventResult(\Bitrix\Main\EventResult::SUCCESS, $mod);
     }
 
     public static function lang($subject, $lang) {

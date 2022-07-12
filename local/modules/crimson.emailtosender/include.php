@@ -8,6 +8,8 @@ class CrimsonEmailToSenderHelper {
 
     const EVENT_NAME = "OnExecutorList";
 
+    private static $db = [];
+
     /**
      * Сборщик исполнителей
      * @param type $type
@@ -58,8 +60,23 @@ class CrimsonEmailToSenderHelper {
         if ($email) {
             $filter['=EMAIL'] = $email;
         }
-        $res = \Bitrix\Main\UserTable::getList(Array(
-                    "select" => ["ID", "LID", 'LANGUAGE_ID', 'SITE_LID' => 'site_ref.LID', 'SITE_LANGUAGE_ID' => 'site_ref.LANGUAGE_ID'],
+
+        // Немного оптимизации
+        $hash = md5(print_r($filter, true));
+        if (static::$db[$hash]) {
+            return static::$db[$hash];
+        }
+
+        $res = \Bitrix\Main\UserTable::getList([
+                    "select" => ["ID",
+                        "LID",
+                        'LANGUAGE_ID',
+                        'SITE_LID' => 'site_ref.LID',
+                        'SITE_LANGUAGE_ID' => 'site_ref.LANGUAGE_ID',
+                        'SITE_SERVER_NAME' => 'site_ref.SERVER_NAME',
+                        'SITE_NAME' => 'site_ref.SITE_NAME',
+                        'SITE_EMAIL' => 'site_ref.EMAIL',
+                    ],
                     "filter" => $filter,
                     'runtime' => [
                         'site_ref' => [
@@ -70,21 +87,27 @@ class CrimsonEmailToSenderHelper {
                             'join_type' => 'left'
                         ]
                     ]
-        ));
+        ]);
         if ($arRes = $res->fetch()) {
             if (!$arRes['LANGUAGE_ID']) {
                 $arRes['LANGUAGE_ID'] = $arRes['SITE_LANGUAGE_ID'];
             }
-            return $arRes;
+            static::$db[$hash] = $arRes;
         } else {
-            return static::getDefaultLidAndLang();
+            static::$db[$hash] = static::getDefaultLidAndLang();
         }
-        return false;
+        return static::$db[$hash];
     }
 
     static function getDefaultLidAndLang() {
         $res = \Bitrix\Main\SiteTable::getList([
-                    "select" => ["LID", 'LANGUAGE_ID'],
+                    "select" => [
+                        "LID",
+                        'LANGUAGE_ID',
+                        'SITE_SERVER_NAME' => 'SERVER_NAME',
+                        'SITE_NAME',
+                        'SITE_EMAIL' => 'EMAIL',
+                    ],
                     "filter" => ['=DEF' => 'Y']
         ]);
         if ($arRes = $res->fetch()) {
